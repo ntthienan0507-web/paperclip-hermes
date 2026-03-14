@@ -340,8 +340,9 @@ export function CommentThread({
     try {
       if (imageUploadHandler) {
         const url = await imageUploadHandler(file);
-        const markdown = `![${file.name}](${url})`;
-        setBody((prev) => prev ? `${prev}\n${markdown}` : markdown);
+        const safeName = file.name.replace(/[[\]]/g, "\\$&");
+        const markdown = `![${safeName}](${url})`;
+        setBody((prev) => prev ? `${prev}\n\n${markdown}` : markdown);
       } else if (onAttachImage) {
         await onAttachImage(file);
       }
