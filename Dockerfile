@@ -4,9 +4,8 @@ ARG USER_GID=1000
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates gosu curl git wget ripgrep python3 \
   && mkdir -p -m 755 /etc/apt/keyrings \
-  && wget -nv -O/etc/apt/keyrings/githubcli-archive-keyring.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-  && echo "20e0125d6f6e077a9ad46f03371bc26d90b04939fb95170f5a1905099cc6bcc0  /etc/apt/keyrings/githubcli-archive-keyring.gpg" | sha256sum -c - \
-  && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+  && chmod 644 /etc/apt/keyrings/githubcli-archive-keyring.gpg \
   && mkdir -p -m 755 /etc/apt/sources.list.d \
   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
   && apt-get update \
@@ -40,6 +39,12 @@ COPY packages/plugins/sdk/package.json packages/plugins/sdk/
 COPY patches/ patches/
 
 RUN pnpm install --frozen-lockfile
+
+# Patch hermes adapter: fix hardcoded localhost + operator precedence bug
+RUN find /app -path "*/hermes-paperclip-adapter/dist/server/execute.js" \
+    -exec sed -i 's|http://127.0.0.1:3100/api|http://paperclip:3100/api|g' {} \; \
+    -exec sed -i 's|http://localhost:3100/api|http://paperclip:3100/api|g' {} \; \
+    -exec sed -i 's|process\.env\.PAPERCLIP_ADAPTER_HOST ? "http://" + process\.env\.PAPERCLIP_ADAPTER_HOST + "/api" : "http://paperclip:3100/api"|(process.env.PAPERCLIP_ADAPTER_HOST ? "http://" + process.env.PAPERCLIP_ADAPTER_HOST + "/api" : "http://paperclip:3100/api")|g' {} \;
 
 FROM base AS build
 WORKDIR /app
@@ -78,6 +83,9 @@ ENV NODE_ENV=production \
 
 VOLUME ["/paperclip"]
 EXPOSE 3100
+
+# Patch adapter: replace localhost with docker hostname for inter-container comms
+RUN find /app -path "*/hermes-paperclip-adapter/dist/server/execute.js" -exec sed -i 's|http://127.0.0.1:3100/api|http://paperclip:3100/api|g' {} \;
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "--import", "./server/node_modules/tsx/dist/loader.mjs", "server/dist/index.js"]

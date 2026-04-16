@@ -281,8 +281,8 @@ export function NewIssueDialog() {
   const { companies, selectedCompanyId, selectedCompany } = useCompany();
   const queryClient = useQueryClient();
   const { pushToast } = useToastActions();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState("<Action> <Subject> — <Scope>");
+  const [description, setDescription] = useState("## Goal\n\\<1-2 câu mô tả kết quả mong muốn\\>\n\n## Acceptance Criteria\n- [ ] \\<criterion 1\\>\n- [ ] \\<criterion 2\\>\n- [ ] \\<criterion 3\\>\n\n## Target\n- Repo: \\<repo name hoặc URL\\>\n- Branch: \\<base branch, default: develop\\>\n\n## Context (optional)\n\\<Thông tin thêm: link Linear, wiki page, API contract,...\\>");
   const [status, setStatus] = useState("todo");
   const [priority, setPriority] = useState("");
   const [assigneeValue, setAssigneeValue] = useState("");
@@ -320,6 +320,7 @@ export function NewIssueDialog() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const descriptionEditorRef = useRef<MarkdownEditorRef>(null);
+  const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
   const stageFileInputRef = useRef<HTMLInputElement | null>(null);
   const assigneeSelectorRef = useRef<HTMLButtonElement | null>(null);
   const projectSelectorRef = useRef<HTMLButtonElement | null>(null);
@@ -526,6 +527,7 @@ export function NewIssueDialog() {
   // Restore draft or apply defaults when dialog opens
   useEffect(() => {
     if (!newIssueOpen) return;
+    setDescriptionEditorKey(k => k + 1);
     setDialogCompanyId(selectedCompanyId);
     executionWorkspaceDefaultProjectId.current = null;
 
@@ -601,6 +603,8 @@ export function NewIssueDialog() {
     } else {
       const defaultProjectId = newIssueDefaults.projectId ?? "";
       const defaultProject = orderedProjects.find((project) => project.id === defaultProjectId);
+      setTitle(newIssueDefaults.title ?? "<Action> <Subject> — <Scope>");
+      setDescription(newIssueDefaults.description ?? "## Goal\n\\<1-2 câu mô tả kết quả mong muốn\\>\n\n## Acceptance Criteria\n- [ ] \\<criterion 1\\>\n- [ ] \\<criterion 2\\>\n- [ ] \\<criterion 3\\>\n\n## Target\n- Repo: \\<repo name hoặc URL\\>\n- Branch: \\<base branch, default: develop\\>\n\n## Context (optional)\n\\<Thông tin thêm: link Linear, wiki page, API contract,...\\>");
       setStatus(newIssueDefaults.status ?? "todo");
       setPriority(newIssueDefaults.priority ?? "");
       setProjectId(defaultProjectId);
@@ -1466,10 +1470,11 @@ export function NewIssueDialog() {
               )}
             >
               <MarkdownEditor
+                key={descriptionEditorKey}
                 ref={descriptionEditorRef}
                 value={description}
                 onChange={setDescription}
-                placeholder="Add description..."
+                placeholder="Describe the issue..."
                 bordered={false}
                 mentions={mentionOptions}
                 contentClassName={cn("text-sm text-muted-foreground pb-12", expanded ? "min-h-[220px]" : "min-h-[120px]")}

@@ -584,7 +584,13 @@ export function agentRoutes(db: Db) {
       { entryFile: "AGENTS.md", replaceExisting: false },
     );
     const nextAdapterConfig = { ...materialized.adapterConfig };
-    delete nextAdapterConfig.promptTemplate;
+    // Preserve promptTemplate in adapterConfig so adapters (e.g. hermes) can
+    // use it at execution time instead of falling back to their built-in default.
+    if (promptTemplate.trim().length > 0) {
+      nextAdapterConfig.promptTemplate = promptTemplate;
+    } else {
+      delete nextAdapterConfig.promptTemplate;
+    }
 
     const updated = await svc.update(agent.id, { adapterConfig: nextAdapterConfig });
     return (updated as T | null) ?? { ...agent, adapterConfig: nextAdapterConfig };
