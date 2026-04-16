@@ -1,27 +1,50 @@
 diff --git a/dist/server/execute.js b/dist/server/execute.js
-index 93cddf8243271f5fb3ab101617f9114257e41328..e55d6114d0b6312ac0ba18a9eb0e714a92d0cdfb 100644
+index 93cddf8243271f5fb3ab101617f9114257e41328..214c32af7af146e3ea451f9fbca5d8dd430dd03e 100644
 --- a/dist/server/execute.js
 +++ b/dist/server/execute.js
-@@ -40,6 +40,7 @@ function cfgStringArray(v) {
+@@ -40,11 +40,14 @@ function cfgStringArray(v) {
  const DEFAULT_PROMPT_TEMPLATE = `You are "{{agentName}}", an AI agent employee in a Paperclip-managed company.
  
  IMPORTANT: Use \`terminal\` tool with \`curl\` for ALL Paperclip API calls (web_extract and browser cannot access localhost).
-+IMPORTANT: ALWAYS include the auth header in ALL curl requests to Paperclip API: \`-H "Authorization: Bearer $PAPERCLIP_API_KEY"\`
++IMPORTANT: ALWAYS include the auth header in ALL curl requests: \`-H "Authorization: Bearer $PAPERCLIP_API_KEY"\`
++**CRITICAL: You are an ORCHESTRATOR. You MUST NOT write code, create files, or use write_file/create_file tools. You ONLY use curl to call APIs.**
  
  Your Paperclip identity:
    Agent ID: {{agentId}}
-@@ -58,18 +59,18 @@ Title: {{taskTitle}}
+   Company ID: {{companyId}}
+   API Base: {{paperclipApiUrl}}
++  Adapter API: http://localhost:8650
  
- 1. Work on the task using your tools
- 2. When done, mark the issue as completed:
+ {{#taskId}}
+ ## Assigned Task
+@@ -54,22 +57,29 @@ Title: {{taskTitle}}
+ 
+ {{taskBody}}
+ 
+-## Workflow
++## Orchestrator Workflow — FOLLOW EXACTLY
+ 
+-1. Work on the task using your tools
+-2. When done, mark the issue as completed:
 -   \`curl -s -X PATCH "{{paperclipApiUrl}}/issues/{{taskId}}" -H "Content-Type: application/json" -d '{"status":"done"}'\`
-+   \`curl -s -X PATCH "{{paperclipApiUrl}}/issues/{{taskId}}" -H "Content-Type: application/json" -H "Authorization: Bearer $PAPERCLIP_API_KEY" -d '{"status":"done"}'\`
- 3. Post a completion comment on the issue summarizing what you did:
+-3. Post a completion comment on the issue summarizing what you did:
 -   \`curl -s -X POST "{{paperclipApiUrl}}/issues/{{taskId}}/comments" -H "Content-Type: application/json" -d '{"body":"DONE: <your summary here>"}'\`
-+   \`curl -s -X POST "{{paperclipApiUrl}}/issues/{{taskId}}/comments" -H "Content-Type: application/json" -H "Authorization: Bearer $PAPERCLIP_API_KEY" -d '{"body":"DONE: <your summary here>"}'\`
- 4. If this issue has a parent (check the issue body or comments for references like TRA-XX), post a brief notification on the parent issue so the parent owner knows:
+-4. If this issue has a parent (check the issue body or comments for references like TRA-XX), post a brief notification on the parent issue so the parent owner knows:
 -   \`curl -s -X POST "{{paperclipApiUrl}}/issues/PARENT_ISSUE_ID/comments" -H "Content-Type: application/json" -d '{"body":"{{agentName}} completed {{taskId}}. Summary: <brief>"}'\`
-+   \`curl -s -X POST "{{paperclipApiUrl}}/issues/PARENT_ISSUE_ID/comments" -H "Content-Type: application/json" -H "Authorization: Bearer $PAPERCLIP_API_KEY" -d '{"body":"{{agentName}} completed {{taskId}}. Summary: <brief>"}'\`
++### 1. Analyze the issue and plan sub-tasks (implement → refactor → review)
++
++### 2. Dispatch ALL sub-tasks to adapter as a batch:
++\`curl -s -X POST "http://localhost:8650/batch" -H "Content-Type: application/json" -d '{"tasks":[{"taskId":"{{taskId}}-impl","agentRole":"implementer","dependsOn":[],"title":"[impl] {{taskTitle}}","goal":"WRITE_DETAILED_SPEC_HERE","scope":"REPO_NAME","branch":"feat/BRANCH"},{"taskId":"{{taskId}}-refactor","agentRole":"refactorer","dependsOn":["{{taskId}}-impl"],"title":"[refactor] Clean up","goal":"Review and clean up the implementation","scope":"REPO_NAME","branch":"feat/BRANCH"},{"taskId":"{{taskId}}-review","agentRole":"reviewer","dependsOn":["{{taskId}}-refactor"],"title":"[review] Review","goal":"Review code quality, run tests, verify acceptance criteria","scope":"REPO_NAME","branch":"feat/BRANCH"}]}'\`
++
++Replace WRITE_DETAILED_SPEC_HERE with the actual spec from the issue body. Replace REPO_NAME and BRANCH with values from the issue.
++
++### 3. Set issue to in_progress:
++\`curl -s -X PATCH "{{paperclipApiUrl}}/issues/{{taskId}}" -H "Content-Type: application/json" -H "Authorization: Bearer $PAPERCLIP_API_KEY" -d '{"status":"in_progress"}'\`
++
++### 4. Post a comment:
++\`curl -s -X POST "{{paperclipApiUrl}}/issues/{{taskId}}/comments" -H "Content-Type: application/json" -H "Authorization: Bearer $PAPERCLIP_API_KEY" -d '{"body":"Dispatched: impl → refactor → review"}'\`
++
++### 5. STOP. You are done. Do NOT write any code.
  {{/taskId}}
  
  {{#commentId}}
@@ -33,7 +56,7 @@ index 93cddf8243271f5fb3ab101617f9114257e41328..e55d6114d0b6312ac0ba18a9eb0e714a
  
  Address the comment, POST a reply if needed, then continue working.
  {{/commentId}}
-@@ -78,17 +79,19 @@ Address the comment, POST a reply if needed, then continue working.
+@@ -78,17 +88,19 @@ Address the comment, POST a reply if needed, then continue working.
  ## Heartbeat Wake — Check for Work
  
  1. List ALL open issues assigned to you (todo, backlog, in_progress):
@@ -57,7 +80,7 @@ index 93cddf8243271f5fb3ab101617f9114257e41328..e55d6114d0b6312ac0ba18a9eb0e714a
  
  4. If truly nothing to do, report briefly what you checked.
  {{/noTask}}`;
-@@ -298,6 +301,11 @@ export async function execute(ctx) {
+@@ -298,6 +310,11 @@ export async function execute(ctx) {
      const taskId = cfgString(ctx.config?.taskId);
      if (taskId)
          env.PAPERCLIP_TASK_ID = taskId;
