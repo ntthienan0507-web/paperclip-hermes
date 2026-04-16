@@ -1,5 +1,5 @@
 diff --git a/dist/server/execute.js b/dist/server/execute.js
-index 93cddf8243271f5fb3ab101617f9114257e41328..1b05187b4f0dd600ede9feface11a9744013983e 100644
+index 93cddf8243271f5fb3ab101617f9114257e41328..e55d6114d0b6312ac0ba18a9eb0e714a92d0cdfb 100644
 --- a/dist/server/execute.js
 +++ b/dist/server/execute.js
 @@ -40,6 +40,7 @@ function cfgStringArray(v) {
@@ -33,12 +33,13 @@ index 93cddf8243271f5fb3ab101617f9114257e41328..1b05187b4f0dd600ede9feface11a974
  
  Address the comment, POST a reply if needed, then continue working.
  {{/commentId}}
-@@ -78,17 +79,17 @@ Address the comment, POST a reply if needed, then continue working.
+@@ -78,17 +79,19 @@ Address the comment, POST a reply if needed, then continue working.
  ## Heartbeat Wake — Check for Work
  
  1. List ALL open issues assigned to you (todo, backlog, in_progress):
 -   \`curl -s "{{paperclipApiUrl}}/companies/{{companyId}}/issues?assigneeAgentId={{agentId}}" | python3 -c "import sys,json;issues=json.loads(sys.stdin.read());[print(f'{i[\"identifier\"]} {i[\"status\"]:>12} {i[\"priority\"]:>6} {i[\"title\"]}') for i in issues if i['status'] not in ('done','cancelled')]" \`
-+   \`curl -s -H "Authorization: Bearer $PAPERCLIP_API_KEY" "{{paperclipApiUrl}}/companies/{{companyId}}/issues?assigneeAgentId={{agentId}}" | python3 -c "import sys,json;issues=json.loads(sys.stdin.read());[print(f'{i[\"identifier\"]} {i[\"status\"]:>12} {i[\"priority\"]:>6} {i[\"title\"]}') for i in issues if i['status'] not in ('done','cancelled')]" \`
++   \`curl -s -H "Authorization: Bearer $PAPERCLIP_API_KEY" "{{paperclipApiUrl}}/companies/{{companyId}}/issues?assigneeAgentId={{agentId}}"\`
++   Review the JSON response and filter out issues with status "done" or "cancelled".
  
  2. If issues found, pick the highest priority one that is not done/cancelled and work on it:
 -   - Read the issue details: \`curl -s "{{paperclipApiUrl}}/issues/ISSUE_ID"\`
@@ -48,14 +49,15 @@ index 93cddf8243271f5fb3ab101617f9114257e41328..1b05187b4f0dd600ede9feface11a974
  
  3. If no issues assigned to you, check for unassigned issues:
 -   \`curl -s "{{paperclipApiUrl}}/companies/{{companyId}}/issues?status=backlog" | python3 -c "import sys,json;issues=json.loads(sys.stdin.read());[print(f'{i[\"identifier\"]} {i[\"title\"]}') for i in issues if not i.get('assigneeAgentId')]" \`
-+   \`curl -s -H "Authorization: Bearer $PAPERCLIP_API_KEY" "{{paperclipApiUrl}}/companies/{{companyId}}/issues?status=backlog" | python3 -c "import sys,json;issues=json.loads(sys.stdin.read());[print(f'{i[\"identifier\"]} {i[\"title\"]}') for i in issues if not i.get('assigneeAgentId')]" \`
++   \`curl -s -H "Authorization: Bearer $PAPERCLIP_API_KEY" "{{paperclipApiUrl}}/companies/{{companyId}}/issues?status=backlog"\`
++   Review the JSON response and find issues without an assigneeAgentId.
     If you find a relevant issue, assign it to yourself:
 -   \`curl -s -X PATCH "{{paperclipApiUrl}}/issues/ISSUE_ID" -H "Content-Type: application/json" -d '{"assigneeAgentId":"{{agentId}}","status":"todo"}'\`
 +   \`curl -s -X PATCH "{{paperclipApiUrl}}/issues/ISSUE_ID" -H "Content-Type: application/json" -H "Authorization: Bearer $PAPERCLIP_API_KEY" -d '{"assigneeAgentId":"{{agentId}}","status":"todo"}'\`
  
  4. If truly nothing to do, report briefly what you checked.
  {{/noTask}}`;
-@@ -298,6 +299,11 @@ export async function execute(ctx) {
+@@ -298,6 +301,11 @@ export async function execute(ctx) {
      const taskId = cfgString(ctx.config?.taskId);
      if (taskId)
          env.PAPERCLIP_TASK_ID = taskId;
