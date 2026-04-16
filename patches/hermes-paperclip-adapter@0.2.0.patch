@@ -1,5 +1,5 @@
 diff --git a/dist/server/execute.js b/dist/server/execute.js
-index 93cddf8243271f5fb3ab101617f9114257e41328..03620a4753c25d01591c48f0b21c0e5b492be5a7 100644
+index 93cddf8243271f5fb3ab101617f9114257e41328..a0c699c340b5aaf060dfc34b7b956f780e0e85bf 100644
 --- a/dist/server/execute.js
 +++ b/dist/server/execute.js
 @@ -40,11 +40,14 @@ function cfgStringArray(v) {
@@ -17,12 +17,12 @@ index 93cddf8243271f5fb3ab101617f9114257e41328..03620a4753c25d01591c48f0b21c0e5b
  
  {{#taskId}}
  ## Assigned Task
-@@ -54,22 +57,30 @@ Title: {{taskTitle}}
+@@ -54,22 +57,26 @@ Title: {{taskTitle}}
  
  {{taskBody}}
  
 -## Workflow
-+## Orchestrator Workflow — FOLLOW EXACTLY
++## Orchestrator Workflow — FOLLOW THESE 3 STEPS EXACTLY
  
 -1. Work on the task using your tools
 -2. When done, mark the issue as completed:
@@ -31,21 +31,17 @@ index 93cddf8243271f5fb3ab101617f9114257e41328..03620a4753c25d01591c48f0b21c0e5b
 -   \`curl -s -X POST "{{paperclipApiUrl}}/issues/{{taskId}}/comments" -H "Content-Type: application/json" -d '{"body":"DONE: <your summary here>"}'\`
 -4. If this issue has a parent (check the issue body or comments for references like TRA-XX), post a brief notification on the parent issue so the parent owner knows:
 -   \`curl -s -X POST "{{paperclipApiUrl}}/issues/PARENT_ISSUE_ID/comments" -H "Content-Type: application/json" -d '{"body":"{{agentName}} completed {{taskId}}. Summary: <brief>"}'\`
-+### 1. Analyze the issue and plan sub-tasks (implement → refactor → review)
++### Step 1: Read the issue body above and extract: REPO_NAME and BRANCH from the Target section, and the GOAL from the Goal section.
 +
-+### 2. Dispatch ALL sub-tasks to adapter as a batch:
-+\`curl -s -X POST "http://localhost:8650/batch" -H "Content-Type: application/json" -d '{"parentIssueId":"{{taskId}}","paperclipApiUrl":"'"$PAPERCLIP_API_URL"'","apiKey":"'"$PAPERCLIP_API_KEY"'","tasks":[{"taskId":"{{taskId}}-impl","agentRole":"implementer","dependsOn":[],"title":"[impl] {{taskTitle}}","goal":"WRITE_DETAILED_SPEC_HERE","scope":"REPO_NAME","branch":"feat/BRANCH"},{"taskId":"{{taskId}}-refactor","agentRole":"refactorer","dependsOn":["{{taskId}}-impl"],"title":"[refactor] Clean up","goal":"Review and clean up the implementation","scope":"REPO_NAME","branch":"feat/BRANCH"},{"taskId":"{{taskId}}-review","agentRole":"reviewer","dependsOn":["{{taskId}}-refactor"],"title":"[review] Review","goal":"Review code quality, run tests, verify acceptance criteria","scope":"REPO_NAME","branch":"feat/BRANCH"}]}'\`
++### Step 2: Run this EXACT command (replace only the 5 quoted arguments):
++\`bash /root/dispatch.sh "{{taskId}}" "{{taskTitle}}" "GOAL_FROM_ISSUE_BODY" "REPO_NAME" "feat/BRANCH"\`
 +
-+Replace WRITE_DETAILED_SPEC_HERE with the actual spec from the issue body. Replace REPO_NAME and BRANCH with values from the issue.
-+The adapter will auto-mark parent issue as done when all sub-tasks complete.
++Example: \`bash /root/dispatch.sh "{{taskId}}" "{{taskTitle}}" "Create hello.html with Hello World content" "webview-demo" "feat/hello-html"\`
 +
-+### 3. Set issue to in_progress:
++### Step 3: Set issue to in_progress:
 +\`curl -s -X PATCH "{{paperclipApiUrl}}/issues/{{taskId}}" -H "Content-Type: application/json" -H "Authorization: Bearer $PAPERCLIP_API_KEY" -d '{"status":"in_progress"}'\`
 +
-+### 4. Post a comment:
-+\`curl -s -X POST "{{paperclipApiUrl}}/issues/{{taskId}}/comments" -H "Content-Type: application/json" -H "Authorization: Bearer $PAPERCLIP_API_KEY" -d '{"body":"Dispatched: impl → refactor → review"}'\`
-+
-+### 5. STOP. You are done. Do NOT write any code.
++Then STOP. Do NOT mark as done. Do NOT write code. The dispatch script handles everything.
  {{/taskId}}
  
  {{#commentId}}
@@ -57,7 +53,7 @@ index 93cddf8243271f5fb3ab101617f9114257e41328..03620a4753c25d01591c48f0b21c0e5b
  
  Address the comment, POST a reply if needed, then continue working.
  {{/commentId}}
-@@ -78,17 +89,19 @@ Address the comment, POST a reply if needed, then continue working.
+@@ -78,17 +85,19 @@ Address the comment, POST a reply if needed, then continue working.
  ## Heartbeat Wake — Check for Work
  
  1. List ALL open issues assigned to you (todo, backlog, in_progress):
@@ -81,7 +77,7 @@ index 93cddf8243271f5fb3ab101617f9114257e41328..03620a4753c25d01591c48f0b21c0e5b
  
  4. If truly nothing to do, report briefly what you checked.
  {{/noTask}}`;
-@@ -298,6 +311,11 @@ export async function execute(ctx) {
+@@ -298,6 +307,11 @@ export async function execute(ctx) {
      const taskId = cfgString(ctx.config?.taskId);
      if (taskId)
          env.PAPERCLIP_TASK_ID = taskId;
