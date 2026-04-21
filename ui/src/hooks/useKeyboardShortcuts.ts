@@ -30,6 +30,13 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      // Cmd+I / Ctrl+I → New Issue (works even in text inputs)
+      if (e.key === "i" && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        onNewIssue?.();
+        return;
+      }
+
       // Don't fire shortcuts when typing in inputs
       if (isKeyboardShortcutTextInputTarget(e.target)) {
         return;

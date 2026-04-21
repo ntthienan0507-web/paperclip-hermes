@@ -11,6 +11,13 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -25,6 +32,7 @@ import {
   Plus,
   X,
   HelpCircle,
+  FileText,
 } from "lucide-react";
 import {
   Tooltip,
@@ -36,6 +44,21 @@ import { cn } from "../lib/utils";
 import { MarkdownEditor, type MarkdownEditorRef, type MentionOption } from "./MarkdownEditor";
 import { StatusBadge } from "./StatusBadge";
 import { ChoosePathButton } from "./PathInstructionsModal";
+
+const PROJECT_TEMPLATES = [
+  {
+    value: "project_spec",
+    label: "Project Spec",
+    namePlaceholder: "<project-name>",
+    description: "## Overview\n\\<Mô tả ngắn gọn về project — mục đích, domain\\>\n\n## Stacks\n\n### \\<stack-name\\>\n- repo: git@gitlab.com:org/repo.git\n- branch: develop\n- Language: \\<language + version\\>\n- Framework: \\<framework + version\\>\n- Database: \\<database + version\\>\n- Cache: \\<cache + version\\>\n- Messaging: \\<messaging + version\\>\n- Architecture: \\<architecture pattern\\>\n\n### \\<stack-name-2\\>\n- repo: git@gitlab.com:org/repo.git\n- branch: develop\n- Language: \\<language + version\\>\n- Framework: \\<framework + version\\>\n- Note: \\<ghi chú thêm nếu cần\\>\n\n## Conventions\n- Branch: feat/{ticket-id}-{description}\n- Commit: <type>(<ticket-id>): <summary>\n- Target: develop\n\n## Dependencies\n- \\<service-name\\> (\\<protocol\\>, \\<mô tả\\>)\n- \\<service-name\\> (\\<protocol\\>, \\<mô tả\\>)",
+  },
+  {
+    value: "blank",
+    label: "Blank",
+    namePlaceholder: "Project name",
+    description: "",
+  },
+];
 
 const projectStatuses = [
   { value: "backlog", label: "Backlog" },
@@ -50,7 +73,7 @@ export function NewProjectDialog() {
   const { selectedCompanyId, selectedCompany } = useCompany();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(PROJECT_TEMPLATES[0].description);
   const [status, setStatus] = useState("planned");
   const [goalIds, setGoalIds] = useState<string[]>([]);
   const [targetDate, setTargetDate] = useState("");
@@ -58,6 +81,9 @@ export function NewProjectDialog() {
   const [workspaceLocalPath, setWorkspaceLocalPath] = useState("");
   const [workspaceRepoUrl, setWorkspaceRepoUrl] = useState("");
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState("project_spec");
+  const [namePlaceholder, setNamePlaceholder] = useState(PROJECT_TEMPLATES[0].namePlaceholder);
+  const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
 
   const [statusOpen, setStatusOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
@@ -114,6 +140,9 @@ export function NewProjectDialog() {
     setWorkspaceLocalPath("");
     setWorkspaceRepoUrl("");
     setWorkspaceError(null);
+    setSelectedTemplate("project_spec");
+    setNamePlaceholder(PROJECT_TEMPLATES[0].namePlaceholder);
+    setDescriptionEditorKey((k) => k + 1);
   }
 
   const isAbsolutePath = (value: string) => value.startsWith("/") || /^[A-Za-z]:[\\/]/.test(value);
@@ -214,7 +243,7 @@ export function NewProjectDialog() {
     >
       <DialogContent
         showCloseButton={false}
-        className={cn("p-0 gap-0", expanded ? "sm:max-w-2xl" : "sm:max-w-lg")}
+        className={cn("flex flex-col p-0 gap-0 h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] sm:h-auto overflow-hidden", expanded ? "sm:max-w-3xl sm:h-[calc(100dvh-2rem)]" : "sm:max-w-xl sm:max-h-[calc(100dvh-4rem)]")}
         onKeyDown={handleKeyDown}
       >
         {/* Header */}
@@ -248,11 +277,42 @@ export function NewProjectDialog() {
           </div>
         </div>
 
+        {/* Template selector */}
+        <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border shrink-0">
+          <div className="flex items-center gap-1.5">
+            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Template</span>
+          </div>
+          <Select
+            value={selectedTemplate}
+            onValueChange={(value) => {
+              const tmpl = PROJECT_TEMPLATES.find((t) => t.value === value);
+              if (!tmpl) return;
+              setSelectedTemplate(tmpl.value);
+              setNamePlaceholder(tmpl.namePlaceholder);
+              setDescription(tmpl.description);
+              setDescriptionEditorKey((k) => k + 1);
+            }}
+          >
+            <SelectTrigger size="sm" className="h-7 max-w-[220px] text-xs border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PROJECT_TEMPLATES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {/* Name */}
-        <div className="px-4 pt-4 pb-2 shrink-0">
+        <div className="px-4 pt-4 pb-2">
           <input
             className="w-full text-lg font-semibold bg-transparent outline-none placeholder:text-muted-foreground/50"
-            placeholder="Project name"
+            placeholder={namePlaceholder}
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
@@ -268,6 +328,7 @@ export function NewProjectDialog() {
         {/* Description */}
         <div className="px-4 pb-2">
           <MarkdownEditor
+            key={descriptionEditorKey}
             ref={descriptionEditorRef}
             value={description}
             onChange={setDescription}
@@ -333,8 +394,10 @@ export function NewProjectDialog() {
           )}
         </div>
 
+        </div>
+
         {/* Property chips */}
-        <div className="flex items-center gap-1.5 px-4 py-2 border-t border-border flex-wrap">
+        <div className="flex items-center gap-1.5 px-4 py-2 border-t border-border flex-wrap shrink-0">
           {/* Status */}
           <Popover open={statusOpen} onOpenChange={setStatusOpen}>
             <PopoverTrigger asChild>

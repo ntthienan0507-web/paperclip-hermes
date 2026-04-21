@@ -79,7 +79,7 @@ export function BreadcrumbBar() {
       <div className="border-b border-border px-4 md:px-6 h-12 shrink-0 flex items-center">
         {menuButton}
         <div className="min-w-0 overflow-hidden flex-1">
-          <h1 className="text-sm font-semibold uppercase tracking-wider truncate">
+          <h1 className="text-sm font-semibold uppercase tracking-wider truncate text-primary">
             {breadcrumbs[0].label}
           </h1>
         </div>

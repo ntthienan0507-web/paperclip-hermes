@@ -984,11 +984,9 @@ export function AgentDetail() {
                 Reset Sessions
               </button>
               <button
-                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-destructive"
-                onClick={() => {
-                  agentAction.mutate("terminate");
-                  setMoreOpen(false);
-                }}
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded text-muted-foreground/40 cursor-not-allowed"
+                disabled
+                title="Terminate is disabled"
               >
                 <Trash2 className="h-3 w-3" />
                 Terminate

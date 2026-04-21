@@ -174,6 +174,18 @@ export function Layout() {
     onShowShortcuts: () => setShortcutsOpen(true),
   });
 
+  // Cmd+I / Ctrl+I → New Issue (always active, independent of keyboard shortcuts setting)
+  useEffect(() => {
+    function handleGlobalNewIssue(e: KeyboardEvent) {
+      if (e.key === "i" && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        openNewIssue();
+      }
+    }
+    document.addEventListener("keydown", handleGlobalNewIssue);
+    return () => document.removeEventListener("keydown", handleGlobalNewIssue);
+  }, [openNewIssue]);
+
   useEffect(() => {
     if (!isMobile) {
       setMobileNavVisible(true);

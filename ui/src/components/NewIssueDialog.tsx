@@ -24,6 +24,13 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import {
@@ -240,6 +247,23 @@ const priorities = [
   { value: "low", label: "Low", icon: ArrowDown, color: priorityColor.low ?? priorityColorDefault },
 ];
 
+const ISSUE_TEMPLATES = [
+  {
+    value: "default",
+    label: "Kiro Specs Requirements",
+    titlePlaceholder: "<feature-name>",
+    title: "",
+    description: "# Requirements Document\n\n## Introduction\n\\<Mô tả ngắn gọn về feature/function cần implement\\>\n\n## Requirements\n\n### Requirement 1\n\n**User Story:** As a \\<role\\>, I want \\<goal\\>, so that \\<benefit\\>.\n\n#### Acceptance Criteria\n\n1. WHEN \\<condition\\> THEN the system SHALL \\<expected behavior\\>\n2. WHEN \\<condition\\> THEN the system SHALL \\<expected behavior\\>\n3. WHEN \\<condition\\> THEN the system SHALL \\<expected behavior\\>\n\n### Requirement 2\n\n**User Story:** As a \\<role\\>, I want \\<goal\\>, so that \\<benefit\\>.\n\n#### Acceptance Criteria\n\n1. WHEN \\<condition\\> THEN the system SHALL \\<expected behavior\\>\n2. WHEN \\<condition\\> THEN the system SHALL \\<expected behavior\\>",
+  },
+  {
+    value: "wiki_engineering",
+    label: "Wiki Engineering (LLM Wiki Trainer)",
+    titlePlaceholder: "Generate wiki for <repo-name>",
+    title: "",
+    description: "## Target Repo\n- SSH: git@gitlab.com:org/repo.git\n- Branch: main (or develop)\n\n## Action\n- [ ] Generate AGENT.md in target repo\n- [ ] Generate wiki docs in wiki repo",
+  },
+] satisfies Array<{ value: string; label: string; titlePlaceholder: string; title: string; description: string }>;
+
 const EXECUTION_WORKSPACE_MODES = [
   { value: "shared_workspace", label: "Project default" },
   { value: "isolated_workspace", label: "New isolated workspace" },
@@ -281,8 +305,9 @@ export function NewIssueDialog() {
   const { companies, selectedCompanyId, selectedCompany } = useCompany();
   const queryClient = useQueryClient();
   const { pushToast } = useToastActions();
-  const [title, setTitle] = useState("<Action> <Subject> — <Scope>");
-  const [description, setDescription] = useState("## Goal\n\\<1-2 câu mô tả kết quả mong muốn\\>\n\n## Acceptance Criteria\n- [ ] \\<criterion 1\\>\n- [ ] \\<criterion 2\\>\n- [ ] \\<criterion 3\\>\n\n## Target\n- Repo: \\<repo name hoặc URL\\>\n- Branch: \\<base branch, default: develop\\>\n\n## Context (optional)\n\\<Thông tin thêm: link Linear, wiki page, API contract,...\\>");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState(ISSUE_TEMPLATES[0].description);
+  const [titlePlaceholder, setTitlePlaceholder] = useState(ISSUE_TEMPLATES[0].titlePlaceholder);
   const [status, setStatus] = useState("todo");
   const [priority, setPriority] = useState("");
   const [assigneeValue, setAssigneeValue] = useState("");
@@ -303,6 +328,7 @@ export function NewIssueDialog() {
   const [dialogCompanyId, setDialogCompanyId] = useState<string | null>(null);
   const [stagedFiles, setStagedFiles] = useState<StagedIssueFile[]>([]);
   const [isFileDragOver, setIsFileDragOver] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("default");
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const executionWorkspaceDefaultProjectId = useRef<string | null>(null);
 
@@ -603,8 +629,9 @@ export function NewIssueDialog() {
     } else {
       const defaultProjectId = newIssueDefaults.projectId ?? "";
       const defaultProject = orderedProjects.find((project) => project.id === defaultProjectId);
-      setTitle(newIssueDefaults.title ?? "<Action> <Subject> — <Scope>");
-      setDescription(newIssueDefaults.description ?? "## Goal\n\\<1-2 câu mô tả kết quả mong muốn\\>\n\n## Acceptance Criteria\n- [ ] \\<criterion 1\\>\n- [ ] \\<criterion 2\\>\n- [ ] \\<criterion 3\\>\n\n## Target\n- Repo: \\<repo name hoặc URL\\>\n- Branch: \\<base branch, default: develop\\>\n\n## Context (optional)\n\\<Thông tin thêm: link Linear, wiki page, API contract,...\\>");
+      setTitle(newIssueDefaults.title ?? "");
+      setDescription(newIssueDefaults.description ?? ISSUE_TEMPLATES[0].description);
+      setTitlePlaceholder(ISSUE_TEMPLATES[0].titlePlaceholder);
       setStatus(newIssueDefaults.status ?? "todo");
       setPriority(newIssueDefaults.priority ?? "");
       setProjectId(defaultProjectId);
@@ -653,6 +680,7 @@ export function NewIssueDialog() {
   function reset() {
     setTitle("");
     setDescription("");
+    setTitlePlaceholder(ISSUE_TEMPLATES[0].titlePlaceholder);
     setStatus("todo");
     setPriority("");
     setAssigneeValue("");
@@ -673,6 +701,7 @@ export function NewIssueDialog() {
     setStagedFiles([]);
     setIsFileDragOver(false);
     setCompanyOpen(false);
+    setSelectedTemplate("default");
     executionWorkspaceDefaultProjectId.current = null;
   }
 
@@ -952,8 +981,8 @@ export function NewIssueDialog() {
         className={cn(
           "flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:h-auto",
           expanded
-            ? "sm:max-w-2xl sm:h-[calc(100dvh-2rem)]"
-            : "sm:max-w-lg"
+            ? "sm:max-w-3xl sm:h-[calc(100dvh-2rem)]"
+            : "sm:max-w-xl"
         )}
         onKeyDown={handleKeyDown}
         onEscapeKeyDown={(event) => {
@@ -1060,12 +1089,45 @@ export function NewIssueDialog() {
           </div>
         </div>
 
+        {/* Template selector */}
+        {!isSubIssueMode && (
+          <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border shrink-0">
+            <div className="flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Template</span>
+            </div>
+            <Select
+              value={selectedTemplate}
+              onValueChange={(value) => {
+                const tmpl = ISSUE_TEMPLATES.find((t) => t.value === value);
+                if (!tmpl) return;
+                setSelectedTemplate(tmpl.value);
+                setTitle(tmpl.title);
+                setTitlePlaceholder(tmpl.titlePlaceholder);
+                setDescription(tmpl.description);
+                setDescriptionEditorKey((k) => k + 1);
+              }}
+            >
+              <SelectTrigger size="sm" className="h-7 max-w-[220px] text-xs border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ISSUE_TEMPLATES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {/* Title */}
-          <div className="px-4 pt-4 pb-2">
+          <div className="px-4 pt-4 pb-2 border-b border-border/60">
             <textarea
             className="w-full text-lg font-semibold bg-transparent outline-none resize-none overflow-hidden placeholder:text-muted-foreground/50"
-            placeholder="Issue title"
+            placeholder={titlePlaceholder}
             rows={1}
             value={title}
             onChange={(e) => {
@@ -1102,7 +1164,7 @@ export function NewIssueDialog() {
             />
           </div>
 
-          <div className="px-4 pb-2">
+          <div className="px-4 pt-2 pb-2">
             <div className="overflow-x-auto overscroll-x-contain">
               <div className="inline-flex items-center gap-2 text-sm text-muted-foreground flex-wrap sm:flex-nowrap sm:min-w-max">
               <span className="w-6 shrink-0 text-center">For</span>

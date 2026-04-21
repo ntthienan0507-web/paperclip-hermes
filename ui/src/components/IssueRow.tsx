@@ -63,8 +63,8 @@ export function IssueRow({
       data-inbox-issue-link
       onClickCapture={() => rememberIssueDetailLocationState(issuePathId, detailState)}
       className={cn(
-        "group flex items-start gap-2 border-b border-border py-2.5 pl-2 pr-3 text-sm no-underline text-inherit transition-colors last:border-b-0 sm:items-center sm:py-2 sm:pl-1",
-        selected ? "hover:bg-transparent" : "hover:bg-accent/50",
+        "group flex items-start gap-2 border-b border-border border-l-2 border-l-transparent py-2.5 pl-2 pr-3 text-sm no-underline text-inherit transition-colors last:border-b-0 hover:border-l-primary sm:items-center sm:py-2 sm:pl-1",
+        selected ? "hover:bg-transparent" : "hover:bg-primary/5",
         className,
       )}
     >
@@ -84,7 +84,7 @@ export function IssueRow({
               <span className="hidden shrink-0 sm:inline-flex">
                 <StatusIcon status={issue.status} className={selectedStatusClass} />
               </span>
-              <span className="shrink-0 font-mono text-xs text-muted-foreground">
+              <span className="shrink-0 font-mono text-xs text-primary/70">
                 {identifier}
               </span>
             </>

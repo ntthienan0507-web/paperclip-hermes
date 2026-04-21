@@ -27,9 +27,9 @@ const boardStatuses = [
   "todo",
   "in_progress",
   "in_review",
-  "blocked",
   "done",
   "cancelled",
+  "blocked",
 ];
 
 function statusLabel(status: string): string {
@@ -55,30 +55,30 @@ function KanbanColumn({
   issues,
   agents,
   liveIssueIds,
+  expanded,
+  visibleLimit,
 }: {
   status: string;
   issues: Issue[];
   agents?: Agent[];
   liveIssueIds?: Set<string>;
+  expanded: boolean;
+  visibleLimit: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
-
-  const isEmpty = issues.length === 0;
+  const visibleIssues = expanded ? issues : issues.slice(0, visibleLimit);
+  const hiddenCount = issues.length - visibleLimit;
 
   return (
-    <div className={`flex flex-col shrink-0 transition-[width,min-width] ${isEmpty && !isOver ? "min-w-[48px] w-[48px]" : "min-w-[260px] w-[260px]"}`}>
-      <div className={`flex items-center gap-2 px-2 py-2 mb-1 ${isEmpty && !isOver ? "justify-center" : ""}`}>
+    <div className="flex flex-col shrink-0 min-w-[260px] w-[260px]">
+      <div className="flex items-center gap-2 px-2 py-2 mb-1">
         <StatusIcon status={status} />
-        {(!isEmpty || isOver) && (
-          <>
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {statusLabel(status)}
-            </span>
-            <span className="text-xs text-muted-foreground/60 ml-auto tabular-nums">
-              {issues.length}
-            </span>
-          </>
-        )}
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {statusLabel(status)}
+        </span>
+        <span className="text-xs text-muted-foreground/60 ml-auto tabular-nums">
+          {issues.length}
+        </span>
       </div>
       <div
         ref={setNodeRef}
@@ -90,7 +90,7 @@ function KanbanColumn({
           items={issues.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
         >
-          {issues.map((issue) => (
+          {visibleIssues.map((issue) => (
             <KanbanCard
               key={issue.id}
               issue={issue}
@@ -99,6 +99,11 @@ function KanbanColumn({
             />
           ))}
         </SortableContext>
+        {!expanded && hiddenCount > 0 && (
+          <div className="py-1.5 text-center text-xs text-muted-foreground/60">
+            + {hiddenCount} more
+          </div>
+        )}
       </div>
     </div>
   );
@@ -194,6 +199,8 @@ export function KanbanBoard({
   onUpdateIssue,
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const VISIBLE_LIMIT = 5;
+  const [expanded, setExpanded] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -211,6 +218,11 @@ export function KanbanBoard({
     }
     return grouped;
   }, [issues]);
+
+  const hasOverflow = useMemo(
+    () => Object.values(columnIssues).some((col) => col.length > VISIBLE_LIMIT),
+    [columnIssues],
+  );
 
   const activeIssue = useMemo(
     () => (activeId ? issues.find((i) => i.id === activeId) : null),
@@ -268,9 +280,20 @@ export function KanbanBoard({
             issues={columnIssues[status] ?? []}
             agents={agents}
             liveIssueIds={liveIssueIds}
+            expanded={expanded}
+            visibleLimit={VISIBLE_LIMIT}
           />
         ))}
       </div>
+      {hasOverflow && (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {expanded ? "Show less" : "Show all"}
+        </button>
+      )}
       <DragOverlay>
         {activeIssue ? (
           <KanbanCard issue={activeIssue} agents={agents} isOverlay />

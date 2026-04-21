@@ -56,7 +56,10 @@ export function Sidebar() {
             style={{ backgroundColor: selectedCompany.brandColor }}
           />
         )}
-        <span className="flex-1 text-sm font-bold text-foreground truncate pl-1">
+        <span
+          className="flex-1 text-sm font-bold truncate pl-1 text-primary"
+          style={selectedCompany?.brandColor ? { color: selectedCompany.brandColor } : undefined}
+        >
           {selectedCompany?.name ?? "Select company"}
         </span>
         <Button
@@ -78,6 +81,9 @@ export function Sidebar() {
           >
             <SquarePen className="h-4 w-4 shrink-0" />
             <span className="truncate">New Issue</span>
+            <kbd className="ml-auto text-[10px] text-muted-foreground/60 font-mono">
+              {/Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘I" : "Ctrl+I"}
+            </kbd>
           </button>
           <SidebarNavItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} liveCount={liveRunCount} />
           <SidebarNavItem

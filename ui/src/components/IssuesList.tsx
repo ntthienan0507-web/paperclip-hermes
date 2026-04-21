@@ -82,7 +82,7 @@ const defaultViewState: IssueViewState = {
 function getViewState(key: string): IssueViewState {
   try {
     const raw = localStorage.getItem(key);
-    if (raw) return { ...defaultViewState, ...JSON.parse(raw) };
+    if (raw) return { ...defaultViewState, ...JSON.parse(raw), nestingEnabled: true };
   } catch { /* ignore */ }
   return { ...defaultViewState };
 }
@@ -584,7 +584,7 @@ export function IssuesList({
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <Button size="sm" variant="outline" onClick={() => openCreateIssueDialog()}>
+          <Button size="sm" onClick={() => openCreateIssueDialog()}>
             <Plus className="h-4 w-4 sm:mr-1" />
             <span className="hidden sm:inline">{createButtonLabel}</span>
           </Button>
@@ -601,14 +601,14 @@ export function IssuesList({
           {/* View mode toggle */}
           <div className="flex items-center border border-border rounded-md overflow-hidden mr-1">
             <button
-              className={`p-1.5 transition-colors ${viewState.viewMode === "list" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`p-1.5 transition-colors ${viewState.viewMode === "list" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => updateView({ viewMode: "list" })}
               title="List view"
             >
               <List className="h-3.5 w-3.5" />
             </button>
             <button
-              className={`p-1.5 transition-colors ${viewState.viewMode === "board" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`p-1.5 transition-colors ${viewState.viewMode === "board" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => updateView({ viewMode: "board" })}
               title="Board view"
             >
@@ -621,9 +621,9 @@ export function IssuesList({
               type="button"
               variant="outline"
               size="icon"
-              className={cn("hidden h-8 w-8 shrink-0 sm:inline-flex", viewState.nestingEnabled && "bg-accent")}
-              onClick={() => updateView({ nestingEnabled: !viewState.nestingEnabled })}
-              title={viewState.nestingEnabled ? "Disable parent-child nesting" : "Enable parent-child nesting"}
+              className="hidden h-8 w-8 shrink-0 sm:inline-flex bg-primary/15 text-primary"
+              title="Parent-child nesting enabled"
+              disabled
             >
               <ListTree className="h-3.5 w-3.5" />
             </Button>

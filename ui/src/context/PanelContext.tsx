@@ -14,12 +14,7 @@ interface PanelContextValue {
 const PanelContext = createContext<PanelContextValue | null>(null);
 
 function readPreference(): boolean {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw === null ? true : raw === "true";
-  } catch {
-    return true;
-  }
+  return true;
 }
 
 function writePreference(visible: boolean) {
